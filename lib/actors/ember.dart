@@ -15,23 +15,19 @@ class EmberPlayer extends SpriteAnimationComponent
   }) : super(size: Vector2.all(64), anchor: Anchor.center);
 
   final Vector2 velocity = Vector2.zero();
-  final double moveSpeed = 200;
   final Vector2 fromAbove = Vector2(0, -1);
   final double gravity = 15;
   final double jumpSpeed = 600;
+  final double moveSpeed = 200;
   final double terminalVelocity = 150;
-
   int horizontalDirection = 0;
-  bool isOnGround = false;
+
   bool hasJumped = false;
+  bool isOnGround = false;
   bool hitByEnemy = false;
 
   @override
-  Future<void>? onLoad() async {
-    add(
-      CircleHitbox(),
-    );
-
+  Future<void> onLoad() async {
     animation = SpriteAnimation.fromFrameData(
       game.images.fromCache('ember.png'),
       SpriteAnimationData.sequenced(
@@ -40,35 +36,31 @@ class EmberPlayer extends SpriteAnimationComponent
         stepTime: 0.12,
       ),
     );
+
+    add(
+      CircleHitbox(),
+    );
+  }
+
+  @override
+  bool onKeyEvent(RawKeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    horizontalDirection = 0;
+    horizontalDirection += (keysPressed.contains(LogicalKeyboardKey.keyA) ||
+            keysPressed.contains(LogicalKeyboardKey.arrowLeft))
+        ? -1
+        : 0;
+    horizontalDirection += (keysPressed.contains(LogicalKeyboardKey.keyD) ||
+            keysPressed.contains(LogicalKeyboardKey.arrowRight))
+        ? 1
+        : 0;
+
+    hasJumped = keysPressed.contains(LogicalKeyboardKey.space);
+    return true;
   }
 
   @override
   void update(double dt) {
     velocity.x = horizontalDirection * moveSpeed;
-    position += velocity * dt;
-
-    if (horizontalDirection < 0 && scale.x > 0) {
-      flipHorizontally();
-    } else if (horizontalDirection > 0 && scale.x < 0) {
-      flipHorizontally();
-    }
-
-    // Apply basic gravity
-    velocity.y += gravity;
-
-    // Determine if ember has jumped
-    if (hasJumped) {
-      if (isOnGround) {
-        velocity.y = -jumpSpeed;
-        isOnGround = false;
-      }
-      hasJumped = false;
-    }
-
-    // Prevent ember from jumping to crazy fast as well as descending too fast and
-    // crashing through the ground or a platform.
-    velocity.y = velocity.y.clamp(-jumpSpeed, terminalVelocity);
-
     game.objectSpeed = 0;
     // Prevent ember from going backwards at screen edge.
     if (position.x - 36 <= 0 && horizontalDirection < 0) {
@@ -80,6 +72,39 @@ class EmberPlayer extends SpriteAnimationComponent
       game.objectSpeed = -moveSpeed;
     }
 
+    // Apply basic gravity.
+    velocity.y += gravity;
+
+    // Determine if ember has jumped.
+    if (hasJumped) {
+      if (isOnGround) {
+        velocity.y = -jumpSpeed;
+        isOnGround = false;
+      }
+      hasJumped = false;
+    }
+
+    // Prevent ember from jumping to crazy fast.
+    velocity.y = velocity.y.clamp(-jumpSpeed, terminalVelocity);
+
+    // Adjust ember position.
+    position += velocity * dt;
+
+    // If ember fell in pit, then game over.
+    if (position.y > game.size.y + size.y) {
+      game.health = 0;
+    }
+
+    if (game.health <= 0) {
+      removeFromParent();
+    }
+
+    // Flip ember if needed.
+    if (horizontalDirection < 0 && scale.x > 0) {
+      flipHorizontally();
+    } else if (horizontalDirection > 0 && scale.x < 0) {
+      flipHorizontally();
+    }
     super.update(dt);
   }
 
@@ -110,33 +135,20 @@ class EmberPlayer extends SpriteAnimationComponent
 
     if (other is Star) {
       other.removeFromParent();
+      game.starsCollected++;
     }
 
     if (other is WaterEnemy) {
       hit();
     }
-
     super.onCollision(intersectionPoints, other);
   }
 
-  @override
-  bool onKeyEvent(RawKeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
-    horizontalDirection = 0;
-    horizontalDirection += (keysPressed.contains(LogicalKeyboardKey.keyA) ||
-            keysPressed.contains(LogicalKeyboardKey.arrowLeft))
-        ? -1
-        : 0;
-    horizontalDirection += (keysPressed.contains(LogicalKeyboardKey.keyD) ||
-            keysPressed.contains(LogicalKeyboardKey.arrowRight))
-        ? 1
-        : 0;
-
-    hasJumped = keysPressed.contains(LogicalKeyboardKey.space);
-    return true;
-  }
-
+  // This method runs an opacity effect on ember
+  // to make it blink.
   void hit() {
     if (!hitByEnemy) {
+      game.health--;
       hitByEnemy = true;
     }
     add(
@@ -144,7 +156,7 @@ class EmberPlayer extends SpriteAnimationComponent
         EffectController(
           alternate: true,
           duration: 0.1,
-          repeatCount: 6,
+          repeatCount: 5,
         ),
       )..onComplete = () {
           hitByEnemy = false;
