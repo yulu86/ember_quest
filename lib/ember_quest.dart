@@ -7,12 +7,16 @@ import 'package:ember_quest/objects/ground_block.dart';
 import 'package:ember_quest/objects/platform_block.dart';
 import 'package:ember_quest/objects/star.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/material.dart';
 
 class EmberQuestGame extends FlameGame {
   EmberQuestGame();
 
   late EmberPlayer _ember;
   double objectSpeed = 0.0;
+
+  late double lastBlockXPosition = 0.0;
+  late UniqueKey lastBlockKey;
 
   @override
   Color backgroundColor() => const Color.fromARGB(255, 173, 223, 247);
@@ -64,8 +68,16 @@ class EmberQuestGame extends FlameGame {
           ));
           break;
         case Star:
+          add(Star(
+            gridPosition: block.gridPosition,
+            xOffset: xPositionOffset,
+          ));
           break;
         case WaterEnemy:
+          add(WaterEnemy(
+            gridPosition: block.gridPosition,
+            xOffset: xPositionOffset,
+          ));
           break;
       }
     }
