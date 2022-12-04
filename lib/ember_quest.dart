@@ -60,6 +60,10 @@ class EmberQuestGame extends FlameGame {
     for (final block in segments[segmentIndex]) {
       switch (block.blockType) {
         case GroundBlock:
+          add(GroundBlock(
+            gridPosition: block.gridPosition,
+            xOffset: xPositionOffset,
+          ));
           break;
         case PlatformBlock:
           add(PlatformBlock(
